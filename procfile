@@ -1,0 +1,1 @@
+web: python -c "import sys; sys.path.append('src'); from api.enriched_company_api import app; import uvicorn; uvicorn.run(app, host='0.0.0.0', port=$PORT)"

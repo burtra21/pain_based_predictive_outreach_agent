@@ -1,0 +1,10 @@
+Column,Formula_or_Prompt
+company_name,
+domain,
+industry,
+employee_count,
+location,
+linkedin_url,
+last_updated,
+data_source,
+scored,

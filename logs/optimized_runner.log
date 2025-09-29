@@ -1,0 +1,87 @@
+2025-09-28 09:56:22,295 - __main__ - INFO - ✅ All components initialized successfully
+2025-09-28 09:56:22,295 - __main__ - INFO - 📊 Collection strategy: [{'collector': 'breach_collector', 'priority': 1, 'reason': 'Highest value signals, very efficient', 'expected_signals_per_run': '10-50', 'signal_types': ['breach_notification', 'post_breach']}, {'collector': 'company_analyzer', 'priority': 2, 'reason': 'Analyzes existing 50K+ companies efficiently', 'expected_signals_per_run': '20-40', 'signal_types': ['breach_mention_detected', 'security_job_postings', 'tech_gaps']}, {'collector': 'insurance_intel', 'priority': 3, 'reason': 'Good insurance signals, moderate efficiency', 'expected_signals_per_run': '10-28', 'signal_types': ['insurance_coverage_issue', 'high_insurance_risk']}, {'collector': 'job_collector', 'priority': 4, 'reason': 'Skills gap signals, good efficiency', 'expected_signals_per_run': '30-80', 'signal_types': ['skills_gap_critical', 'executive_vacancy_critical']}, {'collector': 'dark_web_monitor', 'priority': 5, 'reason': 'Lower value but unique signals', 'expected_signals_per_run': '5-20', 'signal_types': ['active_ransomware', 'dark_web_mention']}]
+2025-09-28 09:56:22,295 - __main__ - INFO - 🚀 Starting Optimized BTA Scheduler
+2025-09-28 09:56:22,295 - __main__ - INFO - 📅 Schedule optimized for maximum signal collection:
+2025-09-28 09:56:22,295 - __main__ - INFO -    - Every 6 hours: Quick collection
+2025-09-28 09:56:22,295 - __main__ - INFO -    - Daily at 6 AM & 2 PM: Full collection
+2025-09-28 09:56:22,295 - __main__ - INFO -    - Monday at 8 AM: Deep analysis
+2025-09-28 09:56:22,295 - __main__ - INFO - 
+📅 Next scheduled runs:
+2025-09-28 09:56:22,295 - __main__ - INFO -    - 2025-09-28 15:56:22.295689
+2025-09-28 09:56:22,295 - __main__ - INFO -    - 2025-09-29 06:00:00
+2025-09-28 09:56:22,295 - __main__ - INFO -    - 2025-09-28 14:00:00
+2025-09-28 09:56:22,295 - __main__ - INFO -    - 2025-09-29 08:00:00
+2025-09-28 09:56:22,295 - __main__ - INFO - 
+🔄 Scheduler running... Press Ctrl+C to stop
+2025-09-28 09:56:22,295 - __main__ - INFO - 🚀 Starting optimized BTA collection
+2025-09-28 09:56:22,295 - __main__ - INFO - ============================================================
+2025-09-28 09:56:22,295 - __main__ - INFO - 📡 Phase 1: Proactive Signal Collection
+2025-09-28 09:56:22,295 - __main__ - INFO - 🔍 Running breach collector...
+2025-09-28 09:56:26,756 - __main__ - INFO - 🏢 Running insurance intelligence...
+2025-09-28 09:57:08,635 - __main__ - INFO - ✅ Proactive collection: 12 signals
+2025-09-28 09:57:08,636 - __main__ - INFO - 🔍 Phase 2: Reactive Company Analysis
+2025-09-28 09:57:08,636 - __main__ - INFO - 📊 Analyzing companies in batches of 200...
+2025-09-28 09:57:08,777 - __main__ - INFO - ✅ Reactive analysis: 30 signals
+2025-09-28 09:57:08,777 - __main__ - INFO - ⚙️ Phase 3: Tech Stack Analysis
+2025-09-28 09:57:08,972 - __main__ - INFO - ℹ️ No companies need tech stack analysis
+2025-09-28 09:57:08,973 - __main__ - INFO - ============================================================
+2025-09-28 09:57:08,973 - __main__ - INFO - ✅ Collection complete in 46.68s
+2025-09-28 09:57:08,973 - __main__ - INFO - 📊 Signals collected: 42
+2025-09-28 09:57:08,973 - __main__ - INFO -    - Proactive: 12
+2025-09-28 09:57:08,973 - __main__ - INFO -    - Reactive: 30
+2025-09-28 09:57:08,974 - __main__ - INFO -    - Tech Stack: 0
+2025-09-28 09:57:08,974 - __main__ - INFO - ============================================================
+2025-09-28 14:00:10,746 - __main__ - INFO - 🚀 Starting optimized BTA collection
+2025-09-28 14:00:10,764 - __main__ - INFO - ============================================================
+2025-09-28 14:00:10,764 - __main__ - INFO - 📡 Phase 1: Proactive Signal Collection
+2025-09-28 14:00:10,764 - __main__ - INFO - 🔍 Running breach collector...
+2025-09-28 14:00:14,118 - __main__ - INFO - 🏢 Running insurance intelligence...
+2025-09-28 14:00:56,919 - __main__ - INFO - ✅ Proactive collection: 12 signals
+2025-09-28 14:00:56,922 - __main__ - INFO - 🔍 Phase 2: Reactive Company Analysis
+2025-09-28 14:00:56,922 - __main__ - INFO - 📊 Analyzing companies in batches of 200...
+2025-09-28 14:00:57,060 - __main__ - INFO - ✅ Reactive analysis: 30 signals
+2025-09-28 14:00:57,061 - __main__ - INFO - ⚙️ Phase 3: Tech Stack Analysis
+2025-09-28 14:00:57,202 - __main__ - INFO - ℹ️ No companies need tech stack analysis
+2025-09-28 14:00:57,203 - __main__ - INFO - ============================================================
+2025-09-28 14:00:57,205 - __main__ - INFO - ✅ Collection complete in 46.46s
+2025-09-28 14:00:57,206 - __main__ - INFO - 📊 Signals collected: 42
+2025-09-28 14:00:57,206 - __main__ - INFO -    - Proactive: 12
+2025-09-28 14:00:57,206 - __main__ - INFO -    - Reactive: 30
+2025-09-28 14:00:57,206 - __main__ - INFO -    - Tech Stack: 0
+2025-09-28 14:00:57,206 - __main__ - INFO - ============================================================
+2025-09-28 15:56:58,106 - __main__ - INFO - 🚀 Starting optimized BTA collection
+2025-09-28 15:56:58,125 - __main__ - INFO - ============================================================
+2025-09-28 15:56:58,126 - __main__ - INFO - 📡 Phase 1: Proactive Signal Collection
+2025-09-28 15:56:58,126 - __main__ - INFO - 🔍 Running breach collector...
+2025-09-28 15:57:01,181 - __main__ - INFO - 🏢 Running insurance intelligence...
+2025-09-28 15:57:40,413 - __main__ - INFO - ✅ Proactive collection: 12 signals
+2025-09-28 15:57:40,415 - __main__ - INFO - 🔍 Phase 2: Reactive Company Analysis
+2025-09-28 15:57:40,415 - __main__ - INFO - 📊 Analyzing companies in batches of 200...
+2025-09-28 15:57:40,556 - __main__ - INFO - ✅ Reactive analysis: 30 signals
+2025-09-28 15:57:40,556 - __main__ - INFO - ⚙️ Phase 3: Tech Stack Analysis
+2025-09-28 15:57:40,698 - __main__ - INFO - ℹ️ No companies need tech stack analysis
+2025-09-28 15:57:40,698 - __main__ - INFO - ============================================================
+2025-09-28 15:57:40,701 - __main__ - INFO - ✅ Collection complete in 42.60s
+2025-09-28 15:57:40,701 - __main__ - INFO - 📊 Signals collected: 42
+2025-09-28 15:57:40,701 - __main__ - INFO -    - Proactive: 12
+2025-09-28 15:57:40,701 - __main__ - INFO -    - Reactive: 30
+2025-09-28 15:57:40,701 - __main__ - INFO -    - Tech Stack: 0
+2025-09-28 15:57:40,702 - __main__ - INFO - ============================================================
+2025-09-28 21:57:44,031 - __main__ - INFO - 🚀 Starting optimized BTA collection
+2025-09-28 21:57:44,049 - __main__ - INFO - ============================================================
+2025-09-28 21:57:44,049 - __main__ - INFO - 📡 Phase 1: Proactive Signal Collection
+2025-09-28 21:57:44,049 - __main__ - INFO - 🔍 Running breach collector...
+2025-09-28 21:57:48,310 - __main__ - INFO - 🏢 Running insurance intelligence...
+2025-09-28 21:58:30,667 - __main__ - INFO - ✅ Proactive collection: 12 signals
+2025-09-28 21:58:30,668 - __main__ - INFO - 🔍 Phase 2: Reactive Company Analysis
+2025-09-28 21:58:30,668 - __main__ - INFO - 📊 Analyzing companies in batches of 200...
+2025-09-28 21:58:30,877 - __main__ - INFO - ✅ Reactive analysis: 30 signals
+2025-09-28 21:58:30,877 - __main__ - INFO - ⚙️ Phase 3: Tech Stack Analysis
+2025-09-28 21:58:31,142 - __main__ - INFO - ℹ️ No companies need tech stack analysis
+2025-09-28 21:58:31,142 - __main__ - INFO - ============================================================
+2025-09-28 21:58:31,144 - __main__ - INFO - ✅ Collection complete in 47.12s
+2025-09-28 21:58:31,145 - __main__ - INFO - 📊 Signals collected: 42
+2025-09-28 21:58:31,145 - __main__ - INFO -    - Proactive: 12
+2025-09-28 21:58:31,145 - __main__ - INFO -    - Reactive: 30
+2025-09-28 21:58:31,145 - __main__ - INFO -    - Tech Stack: 0
+2025-09-28 21:58:31,145 - __main__ - INFO - ============================================================

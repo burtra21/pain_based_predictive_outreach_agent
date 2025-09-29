@@ -1,0 +1,27 @@
+   Sequence Name: BTA High-Pain Outreach
+   
+   Email 1:
+     Timing: Immediate
+     Template: {{campaign_type}} template
+     Personalization: Full
+     
+   Email 2:
+     Timing: Day 3 (if no reply)
+     Template: Follow-up
+     Reference: Previous email
+     
+   Email 3:
+     Timing: Day 7 (if no reply)
+     Template: Value add
+     Include: Industry report
+     
+   LinkedIn Touch:
+     Timing: Day 10
+     Action: Connection request
+     Message: Reference email conversation
+     
+   Email 4:
+     Timing: Day 14
+     Template: Break-up email
+     CTA: Simple yes/no
+   

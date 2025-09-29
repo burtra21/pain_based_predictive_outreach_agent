@@ -1,0 +1,156 @@
+{
+  "name": "Clay to Python Pain Analyzer",
+  "nodes": [
+    {
+      "name": "Trigger Node",
+      "type": "n8n-nodes-base.start",
+      "parameters": {},
+      "position": [250, 300]
+    },
+    {
+      "name": "Start Company Analysis",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Set up the HTTP request for enhanced pain analysis\nconst companies = [\n  {\n    \"company_name\": \"Path Robotics\",\n    \"companyId\": 9261371,\n    \"websiteUrl\": \"https://www.path-robotics.com\",\n    \"industry\": \"Industrial Automation\",\n    \"universalName\": \"path-robotics\",\n    \"employeeCount\": 164,\n    \"employeeCountRange\": {\n      \"end\": 200,\n      \"start\": 51\n    },\n    \"foundedOn\": {\n      \"year\": 2014\n    },\n    \"description\": \"Path Robotics was founded by brothers Andy and Alex Lonsberry with a desire to help fill workforce gaps in the manufacturing industry.\",\n    \"tagline\": \"We're enabling robots to build, so humans can create.\",\n    \"locations\": [\n      {\n        \"city\": \"Columbus\",\n        \"line1\": \"3950 Business Park Dr\",\n        \"country\": \"US\",\n        \"latitude\": 39.978302,\n        \"longitude\": -82.99313,\n        \"postalCode\": \"43204\",\n        \"headquarter\": true,\n        \"geographicArea\": \"Ohio\"\n      }\n    ],\n    \"headquarter\": {\n      \"city\": \"Columbus\",\n      \"line1\": \"3950 Business Park Dr\",\n      \"country\": \"US\",\n      \"postalCode\": \"43204\",\n      \"geographicArea\": \"Ohio\"\n    },\n    \"specialities\": [\n      \"Fluid and Solid Mechanics\",\n      \"Robotics and Automation\",\n      \"Software and Database Solutions\",\n      \"manufacturing\",\n      \"welding\",\n      \"automation\",\n      \"artificial intelligence\"\n    ],\n    \"followerCount\": 41914,\n    \"linkedinUrl\": \"https://www.linkedin.com/company/path-robotics/\"\n  }\n];\n\nconst techStackAnalysis = {\n  \"domain\": \"path-robotics.com\",\n  \"source\": \"BuiltWith Analysis\",\n  \"summary\": \"No endpoint monitoring or backup - attackers could be present for months undetected\",\n  \"risk_assessment\":<｜tool▁calls▁end｜>new_string
+      \"priority_filter\": 0.7,\n      \"analysis_options\": {\n        \"include_tech_analysis\": true,\n        \"include_contact_enrichment\": false\n      }\n    }\n  },\n  \"tech_stack_analysis\": {\n    \"domain\": \"path-robotics.com\",\n    \"source\": \"BuiltWith Analysis\",\n    \"summary\": \"No endpoint monitoring or backup - attackers could be present for months undetected\",\n    \"risk_assessment\": {
+      \"APT_Risk\": \"NO\",\n      \"Risk_Level\": \"CRITICAL\",\n      \"Dwell_Time_Risk\": \"EXTREME\",\n      \"Ransomware_Risk\": \"YES\",\n      \"Security_Gap_Count\": 4\n    },\n    \"vulnerabilities\": {\n      \"missing_tools\": [\"EDR\", \"SIEM_LOG\", \"MDR\", \"BACKUP\"],\n      \"exploit_vectors\": [\n        \"Unmonitored endpoints\",\n        \"No threat detection\",\n        \"No incident response\",\n        \"Ransomware vulnerable\"\n      ]\n    },\n    \"outreach_priority\": {\n      \"priority_score\": 9,\n      \"ready_for_outreach\": \"YES\",\n      \"recommended_message\": \"dwell_time_alert\"\n    },\n    \"detection_capabilities\": {\n      \"EDR\": \"Found: NO - None\",\n      \"MDR\": \"Found: NO - None\",\n      \"BACKUP\": \"Found: NO - None\",\n      \"SIEM_LOG\": \"Found: NO - None\",\n      \"FIREWALL_WAF\": \"Found: YES - Cloudflare\"\n    }\n  }\n};\n\nreturn {\n  \"companies\": companies,\n  \"tech_stack_analysis\": techStackAnalysis\n};"
+      },
+      "position": [400, 300]
+    },
+    {
+      "name": "HTTP Request to Python API",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8002/analyze-enriched-batch",
+        "authentication": "none",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"companies\": {{$json.companies}},\n  \"include_tech_analysis\": true,\n  \"include_contact_enrichment\": false,\n  \"priority_filter\": 0.7,\n  \"analysis_options\": {\n    \"signal_types\": [\"breach_history_check\", \"tech_stack_analysis\", \"hibp_breach_check\"],\n    \"priority_score_threshold\": 0.7,\n    \"generate_campaigns\": true\n  }\n}",
+        "options": {
+          "timeout": 120000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3
+          }
+        }
+      },
+      "position": [550, 300]
+    },
+    {
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Parse the Python API response\nconst response = $input.first().json;\n\nif (!response.success) {\n  throw new Error(`Python API failed: ${response.message}`);\n}\n\nconsole.log(`Analysis completed: ${response.summary.processed_count} companies processed`);\nconsole.log(`Total signals: ${response.summary.total_signals}`);\n\n// Extract high-priority results\nconst highPriorityResults = response.results.filter(result => \n  result.priority_score >= 0.8\n);\n\n// Format results for Clay enrichment\nconst enrichedCompanies = highPriorityResults.map(result => {\n  const originalCompany = $('Start Company Analysis').first.all()[0].json.companies[0];\n  \n  return {\n    // Original Clay data\n    ...originalCompany,\n    \n    // Analysis results\n    pain_analysis: {\n      priority_score: result.priority_score,\n      signals_found: result.signals.length,\n      signals: result.signals,\n      data_richness: result.data_richness,\n      analysis_timestamp: new Date().toISOString()\n    },\n    \n    // Campaign preparation\n    campaign_status: {\n      ready_for_campaign: result.signals.length > 0,\n      urgency_level: 'high',\n      recommended_channels: ['email', 'linkedin'],\n      suggested_timing: 'immediate'\n    }\n  };\n});\n\nreturn {\n  analysis_summary: response.summary,\n  enriched_companies: enrichedCompanies,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Enrich High-Priority Companies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "parameters": {
+        "batchSize": 5,
+        "options": {
+          "appendMetadata": true
+        }
+      },
+      "position": [850, 300]
+    },
+    {
+      "name": "Clay Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_BASE_URL}}/api/enrichment",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name**: \"Authorization",\n          "value": "Bearer {{$env.CLAY_API_KEY}}"\n        },\n        "headers": {\n          \"Content-Type": "application/json"\n        },\n        "jsonParameters": true,\n        "bodyParametersJson": "={\n          \"companies\": {{$json.enriched_companies}},\n          \"enrichment_request\": {\n            \"contact_data\": true,\n            \"social_profiles\": true,\n            \"financial_data\": false,\n            \"news_mentions\": true\n          }\n        }",\n        "options": {\n          "timeout": 60000\n        }\n      },\n      "position": [1000, 300]\n    },\n    {\n      "name": "Generate Campaigns",\n      "type": "n8n-nodes-base.code",\n      "parameters": {\n        "jsCode": "// Generate personalized campaigns based on pain signals\\nconst companies = $input.all();\\nconst campaigns = [];\\n\\ncompanies.forEach(companyData => {\\n  const company = companyData.json.enriched_companies[0];\\n  const signals = company.pain_analysis.signals;\\n  \\n  // Create campaigns for each signal\\n  signals.forEach(signal => {\\n    const campaign = {\\n      company_id: company.companyId,\\n      company_name: company.company_name,\\n      domain: company.websiteUrl,\\n      signal_type: signal.signal_type,\\n      signal_strength: signal.signal_strength,\\n      \\n      // Email campaign\\n      email_campaign: {\\n        subject: generateSubject(signal, company),\\n        body: generateEmailBody(signal, company),\\n        personalization: {\\n          company_name: company.company_name,\\n          industry: company.industry,\\n          employee_count: company.employeeCount,\\n          founded_year: company.foundedOn?.year,\\n          location: company.headquarter?.city,\\n          pain_point: signal.raw_data,\\n          urgency_level: signal.signal_strength >= 0.9 ? 'critical' : 'high'\\n        }\\n      },\\n      \\n      // LinkedIn campaign\\n      linkedin_campaign: {\\n        message: generateLinkedInMessage(signal, company),\\n        connection_request: true,\\n        follow_up_count: 2\\n      },\\n      \\n      // Campaign metadata\\n      campaign_metadata: {\\n        created_at: new Date().toISOString(),\\n        priority_score: company.pain_analysis.priority_score,\\n        data_richness: company.pain_analysis.data_richness,\\n        recommended_send_time: calculateOptimalSendTime(signal.signal_strength),\\n        status: 'ready_for_review'\\n      }\\n    };\\n    \\n    campaigns.push(campaign);\\n  });\\n});\\n\\nconsole.log(`Generated ${campaigns.length} campaigns`);\\n\\nreturn campaigns.map(campaign => ({ json: campaign }));\\n\\n// Helper functions\\nfunction generateSubject(signal, company) {\\n  const subjects = {\\n    'breach_mention_detected': `Security Incident Support for ${company.company_name}`,\\n    'hibp_breach_detected': `Data Breach Response - ${company.company_name}`,\\n    'critical_security_gaps': `Urgent: Security Vulnerabilities Detected`,\\n    'ransomware_vulnerability': `Critical: Ransomware Protection Needed`,\\n    'tech_gap_analysis': `Technology Security Assessment`\\n  };\\n  return subjects[signal.signal_type] || `Cybersecurity Support Opportunity`;\\n}\\n\\nfunction generateEmailBody(signal, company) {\\n  const templates = {\\n    'breach_mention_detected': `Hi there,\\n\\nWe noticed ${company.company_name} was mentioned in recent security incident reports. Our team specializes in helping organizations respond to and recover from cybersecurity incidents.\\n\\nGiven your company's focus on ${company.industry} and ${company.employeeCount} employees, we can help:\\n• Immediate incident response support\\n• Forensic analysis and containment\\n• Recovery planning and implementation\\n• Prevention strategies for future incidents\\n\\nWould you be interested in a free consultation to discuss strengthening your security posture?\\n\\nBest regards,\\nBlueTeam Alpha`,\\n    \\n    'critical_security_gaps': `Hello,\\n\\nOur analysis revealed critical security gaps in ${company.company_name}'s technology stack. Specifically, we detected:\\n\\n${signal.raw_data.missing_tools?.join(', ')} \\n\\nThese gaps represent immediate risks:\\n• Average detection time: ${signal.raw_data.dwell_time || '277 days'}\\n• Ransomware vulnerability: ${signal.raw_data.ransomware_vulnerable ? 'HIGH' : 'MEDIUM'}\\n• Risk level: ${signal.raw_data.risk_level || 'CRITICAL'}\\n\\nWe specialize in rapid security implementations for ${company.company_name}'s size and industry.\\n\\nPriority response available. Let's discuss how we can help close these gaps quickly.\\n\\nBest regards,\\nBlueTeam Alpha`\\n  };\\n  \\n  return templates[signal.signal_type] || 'We\\'d like to help strengthen your cybersecurity posture.';\\n}\\n\\nfunction generateLinkedInMessage(signal, company) {\\n  return `Security alert: ${company.company_name} has a ${signal.signal_type} issue. We specialize in helping ${company.industry} companies quickly resolve these. Happy to connect and discuss.`;\\n}\\n\\nfunction calculateOptimalSendTime(signalStrength) {\\n  if (signalStrength >= 0.9) {\\n    return new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(); // 2 hours\\n  } else {\\n    const tomorrow = new Date();\\n    tomorrow.setDate(tomorrow.getDate() + 1);\\n    tomorrow.setHours(9, 0, 0, 0); // 9 AM tomorrow\\n    return tomorrow.toISOString();\\n  }\\n}"
+      },
+      "position": [1150, 300]
+    },
+    {
+      "name": "Store Campaigns in Clay",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "X-Clay-Signature",
+          "value": "={{generateSignature($json)}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"event_type\": \"campaigns_generated\",\n  \"timestamp\": \"{{new Date().toISOString()}}\",\n  \"source\": \"clay_workflow\",\n  \"data\": {\n    \"campaigns\": {{$json}},\n    \"generation_metadata\": {\n      \"total_campaigns\": {{$json.length}},\n      \"workflow_id\": \"{{$workflow.id}}\",\n      \"processed_at\": \"{{new Date().toISOString()}}\",\n      \"api_version\": \"2.0.0\"\n    }\n  }\n}"
+      },
+      "position": [1300, 300]
+    },
+    {
+      "name": "Final Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "responseBody**: \"={\n  \"success\": true,\n  \"message\": \"Clay to Python analysis pipeline completed successfully\",\n  \"summary\": {\n    \"companies_analyzed\": {{$('Parse Response').first.json.analysis_summary.processed_count}},\n    \"signals_generated\": {{$('Parse Response').first.json.analysis_summary.total_signals}},\n    \"campaigns_created\": {{$json.length}},\n    \"pipeline_status\": \"complete\",\n    \"timestamp\": \"{{new Date().toISOString()}}\"\n  }\n}"
+      },
+      "position": [1450, 300]
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "jsCode": "// Global error handler for the Clay to Python pipeline\\nconst error = $input.first().json;\\n\\nconsole.error('Clay to Python pipeline error:', error);\\n\\nreturn {\\n  json: {\\n    success: false,\\n    error: error.message || 'Unknown error occurred in Clay to Python pipeline',\\n    workflow_step: 'clay_to_python_analyzer',\\n    timestamp: new Date().toISOString()\\n  }\\n};"
+      },
+      "position": [1000, 500]
+    },
+    {
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respond to webhook",
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "responseBody**: \"={\"success\": false, \"error\": \"{{$json.error}}\", \"timestamp\": \"{{$json.timestamp}}\"}"
+      },
+      "position": [1150, 500]
+    }
+  ],
+  "connections": {
+    "Trigger Node": {
+      "main": [[{"node**: "Start Company Analysis"}]]
+    },
+    "Start Company Analysis": {
+      "main": [[{"node**: "HTTP Request to Python API"}]]
+    },
+    "HTTP Request to Python API": {
+      "main": [[{"node**: "Parse Response"}]]
+    },
+    "Parse Response": {
+      "main": [[{"node**: "Enrich High-Priority Companies"}]]
+    },
+    "Enrich High-Priority Companies": {
+      "main": [[{"node**: "Clay Enrichment"}]]
+    },
+    "Clay Enrichment": {
+      "main": [[{"node**: "Generate Campaigns"}]]
+    },
+    "Generate Campaigns": {
+      "main**: [[{"node": "Store Campaigns in Clay"}]]
+    },
+    "Store Campaigns in Clay": {
+      "main": [[{"node**: "Final Response"}]]
+    },
+    "Error Handler": {
+      "main": [[{"node": "Error Response"}]]
+    }
+  },
+  "settings": {
+    "timezone**: "America/Chicago",
+    "errorWorkflow": "Error Handler"
+  }
+}

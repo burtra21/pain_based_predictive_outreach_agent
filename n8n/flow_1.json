@@ -1,0 +1,54 @@
+{
+  "name": "Breach Monitor",
+  "nodes": [
+    {
+      "name": "Schedule",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "cronExpression": "0 6 * * *"  // Daily at 6 AM
+      }
+    },
+    {
+      "name": "Fetch CA Breaches",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://oag.ca.gov/privacy/databreach/list",
+        "method": "GET",
+        "responseFormat": "string"
+      }
+    },
+    {
+      "name": "Parse HTML",
+      "type": "n8n-nodes-base.html",
+      "parameters": {
+        "extractionValues": {
+          "values": [
+            {
+              "key": "company",
+              "cssSelector": ".breach-company",
+              "returnValue": "text"
+            },
+            {
+              "key": "date",
+              "cssSelector": ".breach-date",
+              "returnValue": "text"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Send to Clay",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "https://api.clay.com/v1/tables/company_universe/rows",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer YOUR_CLAY_API_KEY"
+        }
+      }
+    }
+  ]
+}

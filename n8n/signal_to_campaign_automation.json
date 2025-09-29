@@ -1,0 +1,164 @@
+{
+  "name": "Signal-to-Campaign Automation",
+  "nodes": [
+    {
+      "name": "Clay Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "signal-received",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "position": [250, 300]
+    },
+    {
+      "name": "Parse Signal Data",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Extract signal data from Clay webhook\nconst items = $input.all();\nconst webhookData = items[0].json;\n\n// Parse different event types\nlet signals = [];\n\nif (webhookData.event_type === 'batch_analysis_complete') {\n  // Batch analysis results\n  signals = webhookData.data.signals || [];\n} else if (webhookData.event_type === 'tech_analysis_complete') {\n  // Tech analysis results\n  signals = webhookData.data.signals || [webhookData.data];\n} else if (webhookData.event_type === 'signal_enrichment_request') {\n  // Direct signal requests\n  signals = webhookData.data.pain_signals || [];\n}\n\nconsole.log(`Parsed ${signals.length} signals`);\n\n// Filter and prioritize signals\nconst prioritizedSignals = signals.filter(signal => {\n  return signal.signal_strength >= 0.7; // Only high-priority signals\n}).sort((a, b) => {\n  return b.signal_strength - a.signal_strength;\n});\n\nreturn prioritizedSignals.map(signal => ({ json: signal }));"
+      },
+      "position": [400, 300]
+    },
+    {
+      "name": "Check for Existing Campaigns",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Check if campaigns already exist for these companies\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const signal = item.json;\n  \n  // Create unique campaign ID based on company and signal type\n  const campaignId = `${signal.company_name}_${signal.signal_type}_${signal.domain}`.replace(/[^a-zA-Z0-9]/g, '_');\n  \n  // Check if campaign already exists (would query Clay table in production)\n  const existingCampaign = false; // TODO: Query Clay campaigns table\n  \n  if (!existingCatampaign) {\n    signal.campaign_id = campaignId;\n    signal.requires_campaign = true;\n    results.push({ json: signal });\n  } else {\n    console.log(`Campaign already exists for ${signal.company_name} - ${signal.signal_type}`);\n  }\n}\n\nconsole.log(`Generated ${results.length} new campaigns`);\nreturn results;"
+      },
+      "position": [550, 300]
+    },
+    {
+      "name": "Generate Campaign Content",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Generate personalized campaign content based on signal type\nconst items = $input.all();\nconst campaigns = [];\n\nitems.forEach(item => {\n  const signal = item.json;\n  \n  const campaign = {\n    campaign_id: signal.campaign_id,\n    company_name: signal.company_name,\n    domain: signal.domain,\n    signal_type: signal.signal_type,\n    signal_strength: signal.signal_strength,\n    signal_date: signal.signal_date,\n    raw_data: signal.raw_data,\n    source: signal.source,\n    \n    // Campaign content\n    email_subject: generateSubject(signal),\n    email_body: generateBody(signal),\n    linkedin_message: generateLinkedInMessage(signal),\n    sms_message: generateSMS(signal),\n    \n    // Campaign metadata\n    priority: signal.signal_strength,\n    urgency: getUrgency(signal.signal_type),\n    personalization_data: extractPersonalizationData(signal),\n    \n    // Status tracking\n    status: 'draft',\n    created_at: new Date().toISOString(),\n    scheduled_send_time: calculateOptimalSendTime(signal)\n  };\n  \n  campaigns.push(campaign);\n});\n\nreturn campaigns.map(campaign => ({ json: campaign }));\n\n// Helper functions\nfunction generateSubject(signal) {\n  const subjects = {\n    'breach_mention_detected': `Urgent: Security Support for ${signal.company_name}`,\n    'hibp_breach_detected': `Your Data May Have Been Compromised - ${signal.company_name}`,\n    'github_exposure_detected': `Critical: Exposed Credentials Detected - ${signal.company_name}`,\n    'exposed_systems': `Vulnerable Systems Detected - ${signal.company_name}`,\n    'skills_gap_critical': `Cybersecurity Staffing Support for ${signal.company_name}`,\n    'security_tech_gaps': `Security Technology Assessment - ${signal.company_name}`\n  };\n  return subjects[signal.signal_type] || `Security Assessment Opportunity - ${signal.company_name}`;\n}\n\nfunction generateBody(signal) {\n  const bodyTemplates = {\n    'breach_mention_detected': `Hi there,\\n\\nWe noticed ${signal.company_name} was mentioned in recent security incident reports. Our team specializes in helping organizations respond to and recover from cybersecurity incidents.\\n\\nWe can provide:\\n• Immediate incident response support\\n• Forensic analysis and containment\\n• Recovery planning and implementation\\n• Prevention strategies for future incidents\\n\\nWould you like a free consultation to discuss how we can help strengthen your security posture?\\n\\nBest regards\\nBlueTeam Alpha`,    \n    'hibp_breach_detected': `Hello,\\n\\nOur monitoring detected ${signal.company_name} in recent breach data. This indicates that your organization's data may have been compromised in a recent incident.\\n\\nQuick action is essential:\\n• Assess impacted data and systems\\n• Notify affected stakeholders\\n• Implement additional security controls\\n• Monitor for follow-up attacks\\n\\nWe offer rapid response services to help you contain, analyze, and respond to data breaches effectively.\\n\\nLet's discuss how we can help protect your organization.\\n\\nBest regards\\nBlueTeam Alpha`,\n    'github_exposure_detected': `Hi,\\n\\nWe discovered exposed credentials related to ${signal.company_name} on GitHub. This represents a significant security risk that requires immediate attention.\\n\\nWe can help:\\n• Scan and remove exposed credentials\\n• Audit your current security practices\\n• Implement credential management solutions\\n• Provide staff training on secure coding practices\\n\\nWould you like a free security assessment to identify and address these exposures?\\n\\nBest regards\\nBlueTeam Alpha`,\n    'exposed_systems': `Hello,\\n\\nWe identified vulnerable systems exposed to the internet under your domain. These exposure pointrepresent immediate security risks.\\n\\nOur services include:\\n• Security assessment and penetration testing\\n• Vulnerability management\\n• System hardening and configuration\\n• Continuous monitoring solutions\\n\\nLet's schedule a consultation to review your security posture and discuss remediation options.\\n\\nBest regards\\nBlueTeam Alpha`,\n    'skills_gap_critical': `Hi there,\\n\\nWe noticed ${signal.company_name} is actively recruiting for cybersecurity roles. Hiring cybersecurity talent is challenging, but having the right security team is crucial for protecting your organization.\\n\\nWe offer:\n• Interim CISO services\\n• On-demand security expertise\\n• Staff augmentation solutions\\n• Security training and development programs\\n\\nWould you be interested in discussing how we can help fill your immediate security needs?\\n\\nBest regards\\nBlueTeam Alpha`,\n    'security_tech_gaps': `Hello,\\n\\nBased on our analysis, ${signal.company_name} could benefit from additional security technologies. We specialize in helping organizations implement robust security stacks.\\n\\nOur solutions include:\\n• Security technology assessment\\n• Implementation planning and execution\\n• Staff training and support\\n• Ongoing monitoring and optimization\\n\\nLet's discuss your current security technology gaps and how we can help address them.\\n\\nBest regards\\nBlueTeam Alpha`\n  };\n  return bodyTemplates[signal.signal_type] || 'We'd like to help strengthen your cybersecurity posture.\\n\\nBest regards\\nBlueTeam Alpha';\n}\n\nfunction generateLinkedInMessage(signal) {\n  return `Security alert: ${signal.company_name} detected ${signal.signal_type}. We specialize in helping organizations respond to these situations. Happy to connect and discuss how we can help.`;\n}\ n\nfunction generateSMS(signal) {\n  return `Security Alert: ${signal.company_name} - ${signal.signal_type} detected. Immediate response available. Call us: (555) 123-4567`;\n}\n\nfunction getUrgency(signalType) {\n  const urgentTypes = ['breach_mention_detected', 'exposed_systems', 'github_exposure_detected'];\n  return urgentTypes.includes(signalType) ? 'high' : 'medium';\n}\n\nfunction extractPersonalizationData(signal) {\n  return {\n    breach_details: signal.raw_data?.news_title || '',\n    exposure_count: signal.raw_data?.exposed_count || 0,\n    tech_gaps: signal.raw_data?.tech_gaps || [],\n    company_size: signal.raw_data?.employee_count || 0\n  };\n}\n\nfunction calculateOptimalSendTime(signal) {\n  // Send urgent signals immediately\n  if (getUrgency(signal.signal_type) === 'high') {\n    return new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes\n  }\n  \n  // Schedule other signals for business hours tomorrow\n  const tomorrow = new Date();\n  tomorrow.setDate(tomorrow.getDate() + 1);\n  tomorrow.setHours(9, 0, 0, 0); // 9 AM\n  \n  return tomorrow.toISOString();\n}"
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Store Campaigns in Clay",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "X-Clay-Signature",
+          "value": "={{generateSignature($json)}}"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "event_type": "campaign_generated",
+          "timestamp": "={{new Date().toISOString()}}",
+          "source": "clay_automation",
+          "data": {
+            "campaigns": "={{$json}}",
+            "generation_info": {
+              "total_campaigns": "={{$json.length}}",
+              "generated_at": "={{new Date().toISOString()}}",
+              "automation_version": "1.0"
+            }
+          }
+        }
+      },
+      "position": [850, 300]
+    },
+    {
+      "name": "Schedule Campaign Execution",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Schedule campaigns for optimal delivery times\nconst items = $input.all();\nconst scheduled = [];\n\nitems.forEach(item => {\n  const campaign = item.json;\n  \n  // Group campaigns by send time\n  const sendTime = campaign.scheduled_send_time;\n  const scheduledCampaign = {\n    ...campaign,\n    status: 'scheduled',\n    schedule_id: `schedule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`\n  };\n  \n  scheduled.push(scheduledCampaign);\n});\n\nconsole.log(`Scheduled ${scheduled.length} campaigns`);\n\nreturn scheduled.map(scheduledItem => ({ json: scheduledItem }));"
+      },
+      "position": [1000, 300]
+    },
+    {
+      "name": "Update Campaign Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth", 
+        "headerAuth": {
+          "name": "X-Clay-Signature",
+          "value": "={{generateSignature($json)}}"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "event_type": "campaign_scheduled",
+          "timestamp": "={{new Date().toISOString()}}",
+          "source": "clay_automation",
+          "data": {
+            "scheduled_campaigns": "={{$json}}",
+            "scheduling_info": {
+              "total_scheduled": "={{$json.length}}",
+              "scheduled_at": "={{new Date().toISOString()}}"
+            }
+          }
+        }
+      },
+      "position": [1150, 300]
+    },
+    {
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Campaigns generated and scheduled successfully\",\n  \"campaigns_generated\": {{$json.length}},\n  \"scheduled_send_time\": \"{{$json[0].scheduled_send_time}}\",\n  \"timestamp\": \"{{new Date().toISOString()}}\"\n}"
+      },
+      "position": [1300, 300]
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Global error handler for campaign generation\nconst error = $input.first().json;\n\nconsole.error('Campaign generation error:', error);\n\nreturn {\n  json: {\n    success: false,\n    error: error.message || 'Unknown error occurred during campaign generation',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "position": [1150, 500]
+    },
+    {
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "responseBody": "={\"success\": false, \"error\": \"{{$json.error}}\", \"timestamp\": \"{{$json.timestamp}}\"}"
+      },
+      "position": [1300, 500]
+    }
+  ],
+  "connections": {
+    "Clay Webhook Trigger": {
+      "main": [[{"node": "Parse Signal Data"}]]
+    },
+    "Parse Signal Data": {
+      "main": [[{"node": "Check for Existing Campaigns"}]]
+    },
+    "Check for Existing Campaigns": {
+      "main": [[{"node": "Generate Campaign Content"}]]
+    },
+    "Generate Campaign Content": {
+      "main": [[{"node": "Store Campaigns in Clay"}]]
+    },
+    "Store Campaigns in Clay": {
+      "main": [[{"node": "Schedule Campaign Execution"}]]
+    },
+    "Schedule Campaign Execution": {
+      "main": [[{"node": "Update Campaign Status"}]]
+    },
+    "Update Campaign Status": {
+      "main": [[{"node": "Success Response"}]]
+    },
+    "Error Handler": {
+      "main": [[{"node": "Error Response"}]]
+    }
+  },
+  "settings": {
+    "timezone": "America/Chicago",
+    "errorWorkflow": "Error Handler"
+  }
+}

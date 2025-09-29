@@ -1,0 +1,11 @@
+Column,Formula_or_Prompt
+domain,
+edp_type,"One of: certificate_expiration, detention_risk, crew_poaching_rate, retirement_cliff, contract_at_risk, revenue_loss"
+urgency_score,0–1 normalized from triggers
+measurability_score,0–1
+actionability_score,0–1
+universality_score,0–1
+defensibility_score,0–1
+edp_score,0.4*{{urgency_score}} + 0.2*{{measurability_score}} + 0.2*{{actionability_score}} + 0.1*{{universality_score}} + 0.1*{{defensibility_score}}
+justification,Short AI-generated rationale for the selected EDP
+confidence,0–1

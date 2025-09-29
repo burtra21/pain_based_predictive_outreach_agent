@@ -1,0 +1,66 @@
+{
+  "name": "Security Vacancy Tracker",
+  "nodes": [
+    {
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "cronExpression": "0 8 * * *"
+      }
+    },
+    {
+      "name": "Search Indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://www.indeed.com/jobs",
+        "queryParameters": {
+          "q": "CISO OR 'Chief Information Security Officer' OR 'Security Director'",
+          "l": "United States",
+          "fromage": "30",  // Posted in last 30 days
+          "limit": "50"
+        }
+      }
+    },
+    {
+      "name": "Extract Companies",
+      "type": "n8n-nodes-base.itemLists",
+      "parameters": {
+        "operation": "extractFieldValues",
+        "fields": ["company", "job_title", "posted_date"]
+      }
+    },
+    {
+      "name": "Check Days Open",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": `
+          const items = $input.all();
+          return items.map(item => {
+            const postedDate = new Date(item.json.posted_date);
+            const today = new Date();
+            const daysOpen = Math.floor((today - postedDate) / (1000 * 60 * 60 * 24));
+            
+            if (daysOpen > 60) {
+              item.json.signal_strength = 0.9;
+              item.json.signal_type = 'skills_gap_critical';
+            } else if (daysOpen > 30) {
+              item.json.signal_strength = 0.7;
+              item.json.signal_type = 'skills_gap_moderate';
+            }
+            
+            item.json.days_open = daysOpen;
+            return item;
+          });
+        `
+      }
+    },
+    {
+      "name": "Push to Clay",
+      "type": "n8n-nodes-base.clay",
+      "parameters": {
+        "operation": "upsert",
+        "table": "pain_signals"
+      }
+    }
+  ]
+}

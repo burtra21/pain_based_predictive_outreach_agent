@@ -1,0 +1,6 @@
+Column,Formula_or_Prompt
+domain,
+assigned_segment,"One of: Detention Door Knockers, Contract at Risk Operators, Crew Crunchers, Leak Patrol"
+pain_intensity,0–1
+context,AI summary based on top signals/EDP
+assignment_prompt,"Clay AI prompt: ""Given signals and EDP for {{domain}}, map to the best-fit segment and return JSON {segment, pain_intensity, context}."""

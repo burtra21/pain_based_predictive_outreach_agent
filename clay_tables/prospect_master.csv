@@ -1,0 +1,12 @@
+Column,Formula_or_Prompt
+company_name,
+domain,"If blank, generate domain from company_name using Clay AI: ""Find the most likely corporate website domain for {{company_name}}."""
+industry,
+fleet_size,
+vessel_count,
+hq_location,
+linkedin_company_url,
+uscg_company_id,
+imo_company_id,
+last_updated,Use Clay 'Set to now'
+scored,

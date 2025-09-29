@@ -1,0 +1,110 @@
+{
+  "name": "BTA Complete Breach Monitor",
+  "nodes": [
+    {
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "position": [250, 300]
+    },
+    {
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "parameters": {
+        "cronExpression": "0 6,12,18 * * *"
+      },
+      "position": [400, 300]
+    },
+    {
+      "name": "Fetch Multiple Sources",
+      "type": "n8n-nodes-base.splitInBatches",
+      "parameters": {
+        "batchSize": 1
+      },
+      "position": [550, 300]
+    },
+    {
+      "name": "CA Breach Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "https://oag.ca.gov/privacy/databreach/list",
+        "responseFormat": "string"
+      },
+      "position": [700, 200]
+    },
+    {
+      "name": "HHS HIPAA API",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": {
+          "start": 0,
+          "length": 100
+        }
+      },
+      "position": [700, 400]
+    },
+    {
+      "name": "Parse & Transform",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "const items = $input.all();\nconst breaches = [];\n\nitems.forEach(item => {\n  // Parse based on source\n  if (item.json.source === 'ca_ag') {\n    // CA parsing logic\n  } else if (item.json.source === 'hhs') {\n    // HHS parsing logic\n  }\n  \n  // Calculate signal strength\n  const daysSince = calculateDaysSince(item.json.breach_date);\n  const signalStrength = calculateStrength(daysSince);\n  \n  breaches.push({\n    company_name: item.json.company,\n    breach_date: item.json.date,\n    signal_strength: signalStrength,\n    source: item.json.source\n  });\n});\n\nreturn breaches;"
+      },
+      "position": [850, 300]
+    },
+    {
+      "name": "Send to Clay",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer {{$env.CLAY_API_KEY}}"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "table": "pain_signals",
+          "data": "={{$json}}"
+        }
+      },
+      "position": [1000, 300]
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.emailSend",
+      "parameters": {
+        "fromEmail": "alerts@blueteamalpha.com",
+        "toEmail": "admin@blueteamalpha.com",
+        "subject": "Breach Monitor Error",
+        "text": "Error in breach monitoring workflow: {{$json.error}}"
+      },
+      "position": [850, 500]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "Fetch Multiple Sources"}]]
+    },
+    "Fetch Multiple Sources": {
+      "main": [
+        [{"node": "CA Breach Scraper"}],
+        [{"node": "HHS HIPAA API"}]
+      ]
+    },
+    "CA Breach Scraper": {
+      "main": [[{"node": "Parse & Transform"}]]
+    },
+    "HHS HIPAA API": {
+      "main": [[{"node": "Parse & Transform"}]]
+    },
+    "Parse & Transform": {
+      "main": [[{"node": "Send to Clay"}]]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+Column,Formula_or_Prompt
+imo_number,FK to vessel_registry.imo_number
+certificate_type,"e.g., Chief Engineer CoC"
+holder_name,
+credential_id,
+expiration_date,
+days_to_expiration,"DATEDIFF(expiration_date, TODAY())  // replicate in Clay formula or use AI to compute"

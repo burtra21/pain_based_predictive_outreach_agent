@@ -1,0 +1,15 @@
+   Daily Limits:
+     - Emails per day: 100
+     - Per domain: 5
+     - Per contact: 1
+   
+   Timing:
+     - Business hours only: True
+     - Timezone: Recipient local
+     - Avoid: Mondays, Fridays
+   
+   Tracking:
+     - Open tracking: Enabled
+     - Click tracking: Enabled
+     - Reply detection: Enabled
+   

@@ -1,0 +1,10 @@
+Column,Formula_or_Prompt
+domain,
+primary_contact_email,
+primary_contact_name,
+primary_contact_title,
+channel,email | linkedin | sms
+subject_line,[Specific Trigger] + [Quantified Consequence] + [Time Pressure]  // Jinja: {{trigger}} – {{consequence}} – {{time_pressure}}
+message_body,"Use templates/email_body.j2 with variables: company_name, vessel_name, edp, consequence, proof_points, cta"
+status,queued | sent | replied | bounced
+scheduled_send,

@@ -1,0 +1,7 @@
+Column,Formula_or_Prompt
+trigger_id,
+domain,
+trigger_type,"e.g., recent_detention, expiring_cert, contract_win, mass_departure"
+trigger_datetime,
+payload,JSON
+source,

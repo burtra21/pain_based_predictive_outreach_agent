@@ -1,0 +1,9 @@
+Column,Formula_or_Prompt
+imo_number,
+mmsi,
+vessel_name,
+vessel_type,
+flag_state,
+operator_company_domain,Link to prospect_master.domain
+last_known_port,
+last_inspection_date,

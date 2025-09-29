@@ -1,0 +1,1 @@
+Given signals and top EDP for "{{domain}}", choose the best-fit segment from ["Detention Door Knockers","Contract at Risk Operators","Crew Crunchers","Leak Patrol"]. Return JSON: {"segment": "...", "pain_intensity": 0-1, "context": "..."}

@@ -1,0 +1,190 @@
+{
+  "name": "Reactive Company Analyzer API",
+  "nodes": [
+    {
+      "name": "HTTP Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-batch",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "position": [250, 300]
+    },
+    {
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Validate incoming batch request\nconst items = $input.all();\nconst request = items[0].json;\n\nif (!request.companies || !Array.isArray(request.companies)) {\n  throw new Error('Invalid request: companies array required');\n}\n\nif (request.companies.length === 0) {\n  throw new Error('Invalid request: companies array cannot be empty');\n}\n\nif (request.companies.length > 1000) {\n  throw new Error('Invalid request: companies array too large (max 1000)');\n}\n\n// Validate each company\nfor (let i = 0; i < request.companies.length; i++) {\n  const company = request.companies[i];\n  if (!company.company_name && !company.domain) {\n    throw new Error(`Company ${i} missing required fields: company_name or domain`);\n  }\n}\n\nconsole.log(`Processing batch of ${request.companies.length} companies`);\n\nreturn {\n  json: {\n    companies: request.companies,\n    batch_size: request.companies.length,\n    timestamp: new Date().toISOString(),\n    analysis_id: `batch_${Date.now()}`\n  }\n};"
+      },
+      "position": [400, 300]
+    },
+    {
+      "name": "Split into Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "appendMetadata": true
+        }
+      },
+      "position": [550, 300]
+    },
+    {
+      "name": "Call Python API",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8001/analyze-batch",
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "companies": "={{$json.companies}}"
+        },
+        "options": {
+          "timeout": 300000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3
+          }
+        }
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Process Results",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Process analysis results from Python API\nconst items = $input.all();\nconst results = [];\n\nitems.forEach(item => {\n  const response = item.json;\n  \n  if (response.success && response.signals) {\n    response.signals.forEach(signal => {\n      // Format signal for Clay tables\n      results.push({\n        domain: signal.domain,\n        company_name: signal.company_name,\n        signal_type: signal.signal_type,\n        signal_date: signal.signal_date,\n        signal_strength: signal.signal_strength,\n        raw_data: signal.raw_data,\n        source: signal.source,\n        needs_enrichment: true,\n        enrichment_priority: getPriority(signal.signal_type),\n        campaign_type: getCampaignType(signal.signal_type)\n      });\n    }\n  }\n});\n\nconsole.log(`Processed ${results.length} signals`);\n\nreturn results.map(result => ({ json: result }));\n\n// Helper functions\nfunction getPriority(signalType) {\n  const priorities = {\n    'breach_mention_detected': 1.0,\n    'hibp_breach_detected': 0.9,\n    'github_exposure_detected': 0.8,\n    'exposed_systems': 0.8,\n    'skills_gap_critical': 0.7,\n    'security_tech_gaps': 0.6\n  };\n  return priorities[signalType] || 0.5;\n}\n\nfunction getCampaignType(signalType) {\n  const campaigns = {\n    'breach_mention_detected': 'breach_recovery',\n    'hibp_breach_detected': 'breach_response',\n    'github_exposure_detected': 'credential_exposure',\n    'exposed_systems': 'incident_response',\n    'skills_gap_critical': 'skills_gap_tax',\n    'security_tech_gaps': 'tech_upgrade'\n  };\n  return campaigns[signalType] || 'general_outreach';\n}"
+      },
+      "position": [850, 300]
+    },
+    {
+      "name": "Send to Clay",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "X-Clay-Signature",
+          "value": "={{generateSignature($json)}}"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "event_type": "batch_analysis_complete",
+          "timestamp": "={{new Date().toISOString()}}",
+          "source": "clay_workflow",
+          "data": {
+            "companies": "={{$json}}",
+            "batch_info": {
+              "total_signals": "={{$json.length}}",
+              "batch_id": "={{$workflow.id}}",
+              "processed_at": "={{new Date().toISOString()}}"
+            }
+          }
+        }
+      },
+      "position": [1000, 300]
+    },
+    {
+      "name": "Generate Campaigns",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Generate campaigns for high-priority signals\nconst items = $input.all();\nconst campaigns = [];\n\nitems.forEach(item => {\n  const signal = item.json;\n  \n  // Only create campaigns for high-priority signals\n  if (signal.enrichment_priority >= 0.8) {\n    const campaign = {\n      company_name: signal.company_name,\n      domain: signal.domain,\n      signal_type: signal.signal_type,\n      campaign_type: signal.campaign_type,\n      priority: signal.enrichment_priority,\n      subject_template: generateSubject(signal.signal_type),\n      body_template: generateBody(signal.signal_type),\n      personalization_data: signal.raw_data,\n      created_at: new Date().toISOString(),\n      status: 'draft'\n    };\n    \n    campaigns.push(campaign);\n  }\n});\n\nconsole.log(`Generated ${campaigns.length} campaigns`);\n\nreturn campaigns.map(campaign => ({ json: campaign }));\n\n// Helper functions\nfunction generateSubject(signalType) {\n  const subjects = {\n    'breach_mention_detected': 'Urgent: Security Incident Support Available',\n    'hibp_breach_detected': 'Your Data May Have Been Compromised - Free Assessment',\n    'github_exposure_detected': 'Critical: Exposed Credentials Detected',\n    'exposed_systems': 'Vulnerable Systems Detected - Immediate Action Required'\n  };\n  return subjects[signalType] || 'Security Assessment Opportunity';\n}\n\nfunction generateBody(signalType) {\n  const bodies = {\n    'breach_mention_detected': 'We noticed your recent security incident and are offering immediate support...',\n    'hibp_breach_detected': 'Our monitoring detected your company in recent breach data...',\n      'github_exposure_detected': 'We found exposed credentials related to your domain...',\n    'exposed_systems': 'We detected vulnerable systems exposed to the internet...'\n  };\n  return bodies[signalType] || 'We identified security gaps that need immediate attention...';\n}"
+      },
+      "position": [1150, 300]
+    },
+    {
+      "name": "Push Campaigns to Clay",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.CLAY_WEBHOOK_URL}}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "X-Clay-Signature",
+          "value": "={{generateSignature($json)}}"
+        },
+        "jsonParameters": true,
+        "bodyParametersJson": {
+          "event_type": "campaign_generation",
+          "timestamp": "={{new Date().toISOString()}}",
+          "source": "clay_workflow",
+          "data": {
+            "campaigns": "={{$json}}",
+            "generation_info": {
+              "total_campaigns": "={{$json.length}}",
+              "generated_at": "={{new Date().toISOString()}}"
+            }
+          }
+        }
+      },
+      "position": [1300, 300]
+    },
+    {
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Batch analysis completed successfully\",\n  \"total_companies\": \"{{$batch.size()}}\",\n  \"signals_generated\": \"{{$json.length}}\",\n  \"campaigns_created\": \"{{$json.length}}\",\n  \"analysis_id\": \"{{$workflow.id}}\",\n  \"timestamp\": \"{{new Date().toISOString()}}\"\n}"
+      },
+      "position": [1450, 300]
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// Global error handler\nconst error = $input.first().json;\n\nconsole.error('Workflow error:', error);\n\nreturn {\n  json: {\n    success: false,\n    error: error.message || 'Unknown error occurred',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "position": [1000, 500]
+    },
+    {
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "responseBody": "={\"success\": false, \"error\": \"{{$json.error}}\", \"timestamp\": \"{{$json.timestamp}}\"}"
+      },
+      "position": [1150, 500]
+    }
+  ],
+  "connections": {
+    "HTTP Webhook Trigger": {
+      "main": [[{"node": "Validate Input"}]]
+    },
+    "Validate Input": {
+      "main": [[{"node": "Split into Batches"}]]
+    },
+    "Split into Batches": {
+      "main": [[{"node": "Call Python API"}]]
+    },
+    "Call Python API": {
+      "main": [[{"node": "Process Results"}]]
+    },
+    "Process Results": {
+      "main": [[{"node": "Send to Clay"}]]
+    },
+    "Send to Clay": {
+      "main": [[{"node": "Generate Campaigns"}]]
+    },
+    "Generate Campaigns": {
+      "main": [[{"node": "Push Campaigns to Clay"}]]
+    },
+    "Push Campaigns to Clay": {
+      "main": [[{"node": "Success Response"}]]
+    },
+    "Error Handler": {
+      "main": [[{"node": "Error Response"}]]
+    }
+  },
+  "settings": {
+    "timezone": "America/Chicago",
+    "errorWorkflow": "Error Handler"
+  }
+}

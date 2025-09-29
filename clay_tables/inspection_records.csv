@@ -1,0 +1,9 @@
+Column,Formula_or_Prompt
+imo_number,FK to vessel_registry.imo_number
+inspection_date,
+authority,"e.g., USCG, Paris MOU"
+port,
+deficiencies_count,
+detained,
+deficiency_codes,CSV/JSON
+notes,

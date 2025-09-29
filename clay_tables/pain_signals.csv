@@ -1,0 +1,8 @@
+Column,Formula_or_Prompt
+signal_id,
+domain,
+signal_type,
+signal_date,
+signal_strength,
+raw_data,
+source,

@@ -1,0 +1,13 @@
+Column,Formula_or_Prompt
+queue_id,
+domain,
+contact_email,
+contact_name,
+contact_title,
+campaign_type,
+message_personalized,
+scheduled_send,
+status,
+sent_date,
+opened,
+replied,
