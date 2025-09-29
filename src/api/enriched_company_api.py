@@ -171,21 +171,33 @@ async def clay_webhook_trigger(request_data: Dict):
         
         signals = []
         
+        # Track all analysis methods for comprehensive reporting
+        analysis_results = {
+            "hibp_breach_check": {"executed": False, "signals": 0, "status": "skipped"},
+            "serpapi_breach_search": {"executed": False, "signals": 0, "status": "skipped"},
+            "shodan_network_exposure": {"executed": False, "signals": 0, "status": "skipped"},
+            "tech_stack_analysis": {"executed": False, "signals": 0, "status": "skipped"}
+        }
+        
         # FASTEST checks only (under 5 seconds each)
         try:
             # HIBP check (fast)
             hibp_signals = company_analyzer.check_hibp_breaches(company_dict)
             signals.extend(hibp_signals)
+            analysis_results["hibp_breach_check"] = {"executed": True, "signals": len(hibp_signals), "status": "success"}
             logger.info(f"HIBP check completed for {enriched_data.company_name}: {len(hibp_signals)} signals")
         except Exception as e:
+            analysis_results["hibp_breach_check"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
             logger.warning(f"HIBP check failed for {enriched_data.company_name}: {e}")
         
         try:
             # SERPAPI breach search (fast)
             serpapi_signals = company_analyzer.check_breach_mentions_serpapi(company_dict)
             signals.extend(serpapi_signals)
+            analysis_results["serpapi_breach_search"] = {"executed": True, "signals": len(serpapi_signals), "status": "success"}
             logger.info(f"SERPAPI check completed for {enriched_data.company_name}: {len(serpapi_signals)} signals")
         except Exception as e:
+            analysis_results["serpapi_breach_search"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
             logger.warning(f"SERPAPI check failed for {enriched_data.company_name}: {e}")
         
         # SHODAN network exposure check (add to ensure it's included)
@@ -193,10 +205,13 @@ async def clay_webhook_trigger(request_data: Dict):
             try:
                 shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
                 signals.extend(shodan_signals)
+                analysis_results["shodan_network_exposure"] = {"executed": True, "signals": len(shodan_signals), "status": "success"}
                 logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
             except Exception as e:
+                analysis_results["shodan_network_exposure"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
                 logger.warning(f"Shodan check failed for {enriched_data.company_name}: {e}")
         else:
+            analysis_results["shodan_network_exposure"]["status"] = "skipped: API key not configured"
             logger.info(f"Shodan not available for {enriched_data.company_name} (API key not configured)")
         
         # Quick tech gap detection (if time permits)
@@ -204,9 +219,13 @@ async def clay_webhook_trigger(request_data: Dict):
             try:
                 tech_signals = company_analyzer.analyze_technology_stack(company_dict)
                 signals.extend(tech_signals)
+                analysis_results["tech_stack_analysis"] = {"executed": True, "signals": len(tech_signals), "status": "success"}
                 logger.info(f"Tech analysis completed for {enriched_data.company_name}: {len(tech_signals)} signals")
             except Exception as e:
+                analysis_results["tech_stack_analysis"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
                 logger.warning(f"Tech analysis failed for {enriched_data.company_name}: {e}")
+        else:
+            analysis_results["tech_stack_analysis"]["status"] = "skipped: timeout constraint"
         
         # Calculate priority score
         priority_score = 0.0
@@ -228,7 +247,8 @@ async def clay_webhook_trigger(request_data: Dict):
                 "analysis_time": analysis_time,
                 "priority_score": priority_score,
                 "data_richness": "moderate",
-                "success": True
+                "success": True,
+                "analysis_methods": analysis_results
             }
         }
         
