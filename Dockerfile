@@ -1,10 +1,16 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install system dependencies and update pip
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --upgrade pip setuptools wheel
+
 # Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-simple.txt .
+RUN pip install --no-cache-dir -r requirements-simple.txt
 
 # Copy source code
 COPY src/ ./src/
