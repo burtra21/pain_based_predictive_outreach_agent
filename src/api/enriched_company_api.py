@@ -130,8 +130,9 @@ async def system_diagnostics():
 
 @app.post("/clay-webhook-trigger", response_model=Dict)
 async def clay_webhook_trigger(request_data: Dict):
-    """Alternative endpoint for Clay webhook triggers - simpler than HTTP request"""
+    """OPTIMIZED endpoint for Clay webhook triggers - designed for speed under 15 seconds"""
     logger.info(f"Received Clay webhook trigger with data keys: {list(request_data.keys())}")
+    start_time = time.time()
     
     try:
         # Extract company data from webhook payload
@@ -140,13 +141,81 @@ async def clay_webhook_trigger(request_data: Dict):
         # Convert to ClayEnrichedCompany format
         enriched_data = ClayEnrichedCompany(**company_data)
         
-        # Process using existing endpoint logic
-        result = await analyze_enriched_company(enriched_data)
+        # FAST ANALYSIS - Only critical signals within 15 second timeout
+        domain = extract_domain_from_url(enriched_data.websiteUrl)
+        if not domain:
+            return {
+                "success": True,
+                "message": "Clay webhook trigger processed successfully",
+                "analysis_result": {
+                    "company_name": enriched_data.company_name,
+                    "domain": domain,
+                    "signals_found": 0,
+                    "signals": [],
+                    "analysis_time": time.time() - start_time,
+                    "priority_score": 0.0,
+                    "data_richness": "basic",
+                    "success": True
+                }
+            }
         
+        # Convert to analysis format quickly
+        company_dict = {
+            'company_name': enriched_data.company_name,
+            'domain': domain,
+            'industry': enriched_data.industry,
+            'employee_count': enriched_data.employeeCount,
+            'location': extract_location(enriched_data.headquarter),
+            'company_size': categorize_company_size(enriched_data.employeeCount)
+        }
+        
+        signals = []
+        
+        # FASTEST checks only (under 5 seconds each)
+        try:
+            # HIBP check (fast)
+            hibp_signals = company_analyzer.check_hibp_breaches(company_dict)
+            signals.extend(hibp_signals)
+        except Exception as e:
+            logger.warning(f"HIBP check failed for {enriched_data.company_name}: {e}")
+        
+        try:
+            # SERPAPI breach search (fast)
+            serpapi_signals = company_analyzer.check_breach_mentions_serpapi(company_dict)
+            signals.extend(serpapi_signals)
+        except Exception as e:
+            logger.warning(f"SERPAPI check failed for {enriched_data.company_name}: {e}")
+        
+        # Quick tech gap detection (if time permits)
+        if time.time() - start_time < 5.0:  # Only if under 5 seconds
+            try:
+                tech_signals = company_analyzer.analyze_technology_stack(company_dict)
+                signals.extend(tech_signals)
+            except Exception as e:
+                logger.warning(f"Tech analysis failed for {enriched_data.company_name}: {e}")
+        
+        # Calculate priority score
+        priority_score = 0.0
+        for signal in signals:
+            priority_score = max(priority_score, signal.get('signal_strength', 0.5))
+        
+        analysis_time = time.time() - start_time
+        
+        logger.info(f"Fast analysis complete for {enriched_data.company_name}: {len(signals)} signals in {analysis_time:.2f}s")
+
         return {
             "success": True,
             "message": "Clay webhook trigger processed successfully",
-            "analysis_result": result
+            "analysis_result": {
+                "company_name": enriched_data.company_name,
+                "domain": domain,
+                "signals_found": len(signals),
+                "signals": signals,
+                "analysis_time": analysis_time,
+                "priority_score": priority_score,
+                "data_richness": "moderate",
+                "success": True
+            }
         }
         
     except Exception as e:
