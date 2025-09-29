@@ -176,6 +176,7 @@ async def clay_webhook_trigger(request_data: Dict):
             # HIBP check (fast)
             hibp_signals = company_analyzer.check_hibp_breaches(company_dict)
             signals.extend(hibp_signals)
+            logger.info(f"HIBP check completed for {enriched_data.company_name}: {len(hibp_signals)} signals")
         except Exception as e:
             logger.warning(f"HIBP check failed for {enriched_data.company_name}: {e}")
         
@@ -183,14 +184,27 @@ async def clay_webhook_trigger(request_data: Dict):
             # SERPAPI breach search (fast)
             serpapi_signals = company_analyzer.check_breach_mentions_serpapi(company_dict)
             signals.extend(serpapi_signals)
+            logger.info(f"SERPAPI check completed for {enriched_data.company_name}: {len(serpapi_signals)} signals")
         except Exception as e:
             logger.warning(f"SERPAPI check failed for {enriched_data.company_name}: {e}")
+        
+        # SHODAN network exposure check (add to ensure it's included)
+        if company_analyzer.shodan_monitor:
+            try:
+                shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
+                signals.extend(shodan_signals)
+                logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
+            except Exception as e:
+                logger.warning(f"Shodan check failed for {enriched_data.company_name}: {e}")
+        else:
+            logger.info(f"Shodan not available for {enriched_data.company_name} (API key not configured)")
         
         # Quick tech gap detection (if time permits)
         if time.time() - start_time < 5.0:  # Only if under 5 seconds
             try:
                 tech_signals = company_analyzer.analyze_technology_stack(company_dict)
                 signals.extend(tech_signals)
+                logger.info(f"Tech analysis completed for {enriched_data.company_name}: {len(tech_signals)} signals")
             except Exception as e:
                 logger.warning(f"Tech analysis failed for {enriched_data.company_name}: {e}")
         
