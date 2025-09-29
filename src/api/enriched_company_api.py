@@ -108,6 +108,26 @@ async def health_check():
         "enhanced_features": ["Clay Integration", "Tech Stack Analysis", "Priority Scoring"]
     }
 
+@app.get("/diagnostics")
+async def system_diagnostics():
+    """Diagnostic information for troubleshooting"""
+    diagnostics = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment_variables": {
+            "CLAY_API_KEY": "✅ Configured" if config.CLAY_API_KEY else "❌ Missing",
+            "CLAY_WORKSPACE": "✅ Configured" if config.CLAY_WORKSPACE else "❌ Missing", 
+            "CLAY_WEBHOOK_URL": "✅ Configured" if config.CLAY_WEBHOOK_URL else "❌ Missing",
+            "HIBP_API_KEY": "✅ Configured" if config.HIBP_API_KEY else "❌ Missing",
+            "SERPAPI_API_KEY": "✅ Configured" if config.SERPAPI_API_KEY else "❌ Missing",
+            "SHODAN_API_KEY": "✅ Configured" if config.SHODAN_API_KEY else "❌ Missing",
+        },
+        "collectors": {
+            "shodan_available": company_analyzer.shodan_monitor is not None,
+            "analysis_methods": company_analyzer.analysis_methods
+        }
+    }
+    return diagnostics
+
 @app.post("/clay-webhook-trigger", response_model=Dict)
 async def clay_webhook_trigger(request_data: Dict):
     """Alternative endpoint for Clay webhook triggers - simpler than HTTP request"""
