@@ -9,6 +9,7 @@ from typing import List, Dict, Optional
 import json
 import re
 import time
+from config.settings import config
 
 class CompanyAnalyzer:
     """Analyzes existing companies in Clay database for pain signals"""
@@ -20,6 +21,12 @@ class CompanyAnalyzer:
             'User-Agent': 'BTA-CompanyAnalyzer/1.0'
         })
         
+        # Initialize Shodan if API key available
+        self.shodan_monitor = None
+        if config.SHODAN_API_KEY:
+            from .shodan_monitor import ShodanMonitor
+            self.shodan_monitor = ShodanMonitor(config.SHODAN_API_KEY)
+        
         # Analysis methods (REACTIVE ONLY)
         self.analysis_methods = [
             'hibp_breach_check',           # Moved from proactive
@@ -29,7 +36,8 @@ class CompanyAnalyzer:
             'job_posting_analysis',        # LinkedIn Jobs
             'technology_stack_analysis',   # BuiltWith data
             'insurance_risk_assessment',   # Risk calculation
-            'compliance_vulnerability_check' # Compliance issues
+            'compliance_vulnerability_check', # Compliance issues
+            'shodan_network_exposure'      # Network vulnerability scan (NEW!)
         ]
     
     def analyze_company_batch(self, batch_size: int = 100) -> List[Dict]:
@@ -138,6 +146,11 @@ class CompanyAnalyzer:
             # Method 7: Check compliance vulnerabilities
             compliance_signals = self.check_compliance_vulnerabilities(company)
             signals.extend(compliance_signals)
+            
+            # Method 8: Shodan network exposure analysis (NEW!)
+            if self.shodan_monitor:
+                shodan_signals = self.check_shodan_exposures(company)
+                signals.extend(shodan_signals)
             
         except Exception as e:
             print(f"Error analyzing company {company.get('domain', 'unknown')}: {e}")
@@ -895,6 +908,43 @@ class CompanyAnalyzer:
         except Exception as e:
             print(f"❌ Error sending to webhook: {e}")
             return False
+    
+    def check_shodan_exposures(self, company: Dict) -> List[Dict]:
+        """Check Shodan for network exposures and vulnerabilities (NEW!)"""
+        signals = []
+        
+        if not self.shodan_monitor:
+            return signals
+            
+        try:
+            domain = company.get('domain', '')
+            company_name = company.get('company_name', '')
+            
+            if not domain:
+                return signals
+            
+            print(f"🔍 Running Shodan network analysis for {domain}")
+            
+            # Run Shodan exposure analysis
+            shodan_signals = self.shodan_monitor.analyze_domain_exposure(company)
+            
+            if shodan_signals:
+                print(f"🚨 Found {len(shodan_signals)} Shodan exposures for {domain}")
+                
+                # Add company context to signals
+                for signal in shodan_signals:
+                    signal['company_name'] = company_name
+                    signal['domain'] = domain
+                    signal['priority_score'] = signal.get('priority_score', 0.8)
+                
+                signals.extend(shodan_signals)
+            else:
+                print(f"✅ No critical Shodan exposures found for {domain}")
+                
+        except Exception as e:
+            print(f"❌ Error checking Shodan exposures for {company.get('domain', 'unknown')}: {e}")
+            
+        return signals
     
     def run_analysis(self, batch_size: int = 100):
         """Main entry point for company analysis"""
