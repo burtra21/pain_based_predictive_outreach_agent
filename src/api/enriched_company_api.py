@@ -205,11 +205,12 @@ async def clay_webhook_trigger(request_data: Dict):
             try:
                 shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
                 signals.extend(shodan_signals)
+                
                 analysis_results["shodan_network_exposure"] = {
                     "executed": True, 
                     "signals": len(shodan_signals), 
                     "status": "success",
-                    "credits_used": self.estimate_shodan_credits(shodan_signals)
+                    "credits_used": estimate_shodan_credits(shodan_signals)
                 }
                 logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
             except Exception as e:
