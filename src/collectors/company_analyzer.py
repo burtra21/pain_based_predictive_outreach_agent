@@ -269,7 +269,7 @@ class CompanyAnalyzer:
                             print(f"GitHub exposure found for: {domain}")
                             break  # Found one, no need to search more
                     
-                    time.sleep(1)  # Rate limiting
+                    time.sleep(0.3)  # Reduced rate limiting for Clay speed
                     
                 except Exception as e:
                     continue
@@ -322,15 +322,10 @@ class CompanyAnalyzer:
             domain = company.get('domain', '')
             company_name = company.get('company_name', '')
             
-            # Search for breach mentions using SERPAPI - Updated queries for recent years
+            # Search for breach mentions using SERPAPI - OPTIMIZED FOR SPEED (2 queries max)
             search_queries = [
-                f'"{company_name}" data breach 2024',
-                f'"{company_name}" data breach 2025',
-                f'"{company_name}" data breach "2023"',
-                f'"{company_name}" security incident 2024',
-                f'"{company_name}" cyber attack 2024',
-                f'"{domain}" breach 2024',
-                f'"{domain}" breach "2023"'
+                f'"{company_name}" data breach 2024',  # Highest value first
+                f'"{company_name}" data breach 2025'   # Second highest
             ]
             
             for query in search_queries:
@@ -342,9 +337,9 @@ class CompanyAnalyzer:
                             'api_key': config.SERPAPI_API_KEY,
                             'engine': 'google',
                             'tbm': 'nws',  # News search
-                            'num': 10
+                            'num': 5      # Reduced for speed
                         },
-                        timeout=15
+                        timeout=8        # Reduced timeout
                     )
                     
                     if response.status_code == 200:
@@ -392,7 +387,7 @@ class CompanyAnalyzer:
                             elif any(keyword in title or keyword in snippet for keyword in breach_keywords) and not is_recent:
                                 print(f"Found OLD breach mention for: {company_name} (Date: {news_date}) - FILTERED OUT")
                     
-                    time.sleep(1)  # Rate limiting
+                    time.sleep(0.3)  # Reduced rate limiting for Clay speed
                     
                 except Exception as e:
                     print(f"Error with SERPAPI search: {e}")
