@@ -179,19 +179,11 @@ async def clay_webhook_trigger(request_data: Dict):
             "tech_stack_analysis": {"executed": False, "signals": 0, "status": "skipped"}
         }
         
-        # FASTEST checks only (under 5 seconds each)
-        try:
-            # HIBP check (fast)
-            hibp_signals = company_analyzer.check_hibp_breaches(company_dict)
-            signals.extend(hibp_signals)
-            analysis_results["hibp_breach_check"] = {"executed": True, "signals": len(hibp_signals), "status": "success"}
-            logger.info(f"HIBP check completed for {enriched_data.company_name}: {len(hibp_signals)} signals")
-        except Exception as e:
-            analysis_results["hibp_breach_check"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
-            logger.warning(f"HIBP check failed for {enriched_data.company_name}: {e}")
+        # ULTRA-FAST analysis - prioritize speed over comprehensive analysis for Clay
+        # Target: Under 10 seconds total
         
+        # 1. SERPAPI breach search first (fastest, highest value)
         try:
-            # SERPAPI breach search (fast)
             serpapi_signals = company_analyzer.check_breach_mentions_serpapi(company_dict)
             signals.extend(serpapi_signals)
             analysis_results["serpapi_breach_search"] = {"executed": True, "signals": len(serpapi_signals), "status": "success"}
@@ -200,38 +192,53 @@ async def clay_webhook_trigger(request_data: Dict):
             analysis_results["serpapi_breach_search"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
             logger.warning(f"SERPAPI check failed for {enriched_data.company_name}: {e}")
         
-        # SHODAN network exposure check (add to ensure it's included)
-        if company_analyzer.shodan_monitor:
+        # 2. HIBP check second (reasonably fast)
+        if time.time() - start_time < 8.0:  # Only if under 8 seconds total
             try:
-                shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
-                signals.extend(shodan_signals)
-                
-                analysis_results["shodan_network_exposure"] = {
-                    "executed": True, 
-                    "signals": len(shodan_signals), 
-                    "status": "success",
-                    "credits_used": estimate_shodan_credits(shodan_signals)
-                }
-                logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
+                hibp_signals = company_analyzer.check_hibp_breaches(company_dict)
+                signals.extend(hibp_signals)
+                analysis_results["hibp_breach_check"] = {"executed": True, "signals": len(hibp_signals), "status": "success"}
+                logger.info(f"HIBP check completed for {enriched_data.company_name}: {len(hibp_signals)} signals")
             except Exception as e:
-                analysis_results["shodan_network_exposure"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
-                logger.warning(f"Shodan check failed for {enriched_data.company_name}: {e}")
+                analysis_results["hibp_breach_check"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
+                logger.warning(f"HIBP check failed for {enriched_data.company_name}: {e}")
         else:
-            analysis_results["shodan_network_exposure"]["status"] = "skipped: API key not configured"
-            logger.info(f"Shodan not available for {enriched_data.company_name} (API key not configured)")
+            analysis_results["hibp_breach_check"]["status"] = "skipped: timeout constraint"
         
-        # Quick tech gap detection (if time permits)
-        if time.time() - start_time < 5.0:  # Only if under 5 seconds
-            try:
-                tech_signals = company_analyzer.analyze_technology_stack(company_dict)
-                signals.extend(tech_signals)
-                analysis_results["tech_stack_analysis"] = {"executed": True, "signals": len(tech_signals), "status": "success"}
-                logger.info(f"Tech analysis completed for {enriched_data.company_name}: {len(tech_signals)} signals")
-            except Exception as e:
-                analysis_results["tech_stack_analysis"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
-                logger.warning(f"Tech analysis failed for {enriched_data.company_name}: {e}")
+        # 3. Shodan ONLY if still under time budget AND high-risk domain detected
+        if company_analyzer.shodan_monitor and time.time() - start_time < 15.0:
+            # Only run Shodan for industrial/tech companies (likely to have exposures)
+            should_run_shodan = any(keyword in enriched_data.company_name.lower() for keyword in [
+                'robotics', 'automation', 'industrial', 'manufacturing', 'engineering', 
+                'technology', 'software', 'tech', 'systems', 'solutions', 'services'
+            ]) or any(keyword in (enriched_data.industry or '').lower() for keyword in [
+                'industrial', 'manufacturing', 'automation', 'technology', 'engineering'
+            ])
+            
+            if should_run_shodan:
+                try:
+                    shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
+                    signals.extend(shodan_signals)
+                    
+                    analysis_results["shodan_network_exposure"] = {
+                        "executed": True, 
+                        "signals": len(shodan_signals), 
+                        "status": "success",
+                        "credits_used": estimate_shodan_credits(shodan_signals)
+                    }
+                    logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
+                except Exception as e:
+                    analysis_results["shodan_network_exposure"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
+                    logger.warning(f"Shodan check failed for {enriched_data.company_name}: {e}")
+            else:
+                analysis_results["shodan_network_exposure"]["status"] = "skipped: low-risk industry"
+                logger.info(f"Skipped Shodan for {enriched_data.company_name} (low-risk industry)")
         else:
-            analysis_results["tech_stack_analysis"]["status"] = "skipped: timeout constraint"
+            analysis_results["shodan_network_exposure"]["status"] = "skipped: timeout constraint"
+            logger.info(f"Skipped Shodan for {enriched_data.company_name} (timeout)")
+        
+        # 4. Skip tech stack analysis - too slow for Clay timeout
+        analysis_results["tech_stack_analysis"]["status"] = "skipped: Clay timeout optimization"
         
         # Calculate priority score
         priority_score = 0.0
