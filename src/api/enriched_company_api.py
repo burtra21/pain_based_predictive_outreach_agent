@@ -205,7 +205,12 @@ async def clay_webhook_trigger(request_data: Dict):
             try:
                 shodan_signals = company_analyzer.check_shodan_exposures(company_dict)
                 signals.extend(shodan_signals)
-                analysis_results["shodan_network_exposure"] = {"executed": True, "signals": len(shodan_signals), "status": "success"}
+                analysis_results["shodan_network_exposure"] = {
+                    "executed": True, 
+                    "signals": len(shodan_signals), 
+                    "status": "success",
+                    "credits_used": self.estimate_shodan_credits(shodan_signals)
+                }
                 logger.info(f"Shodan check completed for {enriched_data.company_name}: {len(shodan_signals)} signals")
             except Exception as e:
                 analysis_results["shodan_network_exposure"] = {"executed": True, "signals": 0, "status": f"error: {str(e)}"}
@@ -259,6 +264,36 @@ async def clay_webhook_trigger(request_data: Dict):
             "error": str(e),
             "message": "Failed to process Clay webhook trigger"
         }
+
+def estimate_shodan_credits(signals: List[Dict]) -> Dict:
+    """
+    Estimate Shodan credit usage based on signals found.
+    Shodan Freelancer Plan: $49/month for 5,000 credits
+    
+    Credit costs:
+    - Search query: 1 credit per query
+    - Host details: 1 credit per IP scanned
+    """
+    if not signals:
+        return {"estimated_credits": 0, "cost": "$0.00", "plan_status": "freelancer"}
+    
+    # Count Shodan searches performed
+    search_queries = len([s for s in signals if s.get('source') == 'shodan'])
+    host_scans = sum([len(s.get('raw_data', {}).get('ips_scanned', [])) for s in signals])
+    
+    total_credits = search_queries + host_scans
+    
+    cost_per_credit = 49 / 5000  # Freelancer plan cost breakdown
+    estimated_cost = total_credits * cost_per_credit
+    
+    return {
+        "estimated_credits": total_credits,
+        "search_queries": search_queries,
+        "host_scans": host_scans,
+        "estimated_cost": f"${estimated_cost:.3f}",
+        "plan_status": "freelancer_5000_monthly",
+        "credits_remaining_estimate": 5000 - total_credits if total_credits <= 5000 else 0
+    }
 
 @app.post("/analyze-enriched-company")
 async def analyze_enriched_company(company: ClayEnrichedCompany):

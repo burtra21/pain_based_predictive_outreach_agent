@@ -182,21 +182,38 @@ class CompanyAnalyzer:
             if response.status_code == 200:
                 breaches = response.json()
                 if breaches:
-                    signal = {
-                        'company_name': company.get('company_name', ''),
-                        'domain': domain,
-                        'signal_type': 'hibp_breach_detected',
-                        'signal_date': datetime.utcnow().isoformat(),
-                        'signal_strength': 0.7,
-                        'raw_data': {
-                            'breach_count': len(breaches),
-                            'breaches': breaches[:5],  # First 5 breaches
-                            'detection_method': 'hibp_api'
-                        },
-                        'source': 'company_analysis'
-                    }
-                    signals.append(signal)
-                    print(f"HIBP breach found for: {domain} ({len(breaches)} breaches)")
+                    # Filter for RECENT breaches (last 1-2 years)
+                    recent_breaches = []
+                    for breach in breaches:
+                        breach_date = breach.get('BreachDate', '')
+                        breach_added = breach.get('AddedDate', '')
+                        
+                        # Check if breach is from 2023-2025
+                        date_to_check = breach_date or breach_added
+                        if self.is_recent_date(date_to_check):
+                            recent_breaches.append(breach)
+                    
+                    if recent_breaches:
+                        signal = {
+                            'company_name': company.get('company_name', ''),
+                            'domain': domain,
+                            'signal_type': 'hibp_breach_detected',
+                            'signal_date': datetime.utcnow().isoformat(),
+                            'signal_strength': 0.7,
+                            'raw_data': {
+                                'breach_count': len(recent_breaches),
+                                'total_breaches': len(breaches),
+                                'breaches': recent_breaches[:5],  # First 5 RECENT breaches
+                                'detection_method': 'hibp_api',
+                                'date_filtered': True,
+                                'filter_years': '2023-2025'
+                            },
+                            'source': 'company_analysis'
+                        }
+                        signals.append(signal)
+                        print(f"HIBP RECENT breach(es) found for: {domain} ({len(recent_breaches)}/{len(breaches)} recent)")
+                    else:
+                        print(f"HIBP breaches found for: {domain} ({len(breaches)} total) - ALL FILTERED OUT (too old)")
             
             time.sleep(1)  # Rate limiting
             
@@ -262,8 +279,38 @@ class CompanyAnalyzer:
         
         return signals
     
+    def is_recent_date(self, date_str: str) -> bool:
+        """Check if date is within the last 1-2 years"""
+        if not date_str:
+            return False
+        
+        try:
+            from datetime import datetime, timedelta
+            import re
+            
+            # Parse various date formats
+            current_date = datetime.now()
+            
+            # Try to parse the date string (SERPAPI returns varied formats)
+            if re.search(r'\d{4}', date_str):  # Has year
+                # Extract year
+                year_match = re.search(r'(\d{4})', date_str)
+                if year_match:
+                    news_year = int(year_match.group(1))
+                    
+                    # Accept dates from 2023 onwards (1-2 years)
+                    if news_year >= 2023:
+                        return True
+            
+            # If parsing fails, default to accepting (conservative approach)
+            return True
+            
+        except Exception as e:
+            print(f"Error parsing date: {date_str} - {e}")
+            return True  # Default to accepting if parsing fails
+    
     def check_breach_mentions_serpapi(self, company: Dict) -> List[Dict]:
-        """Check breach mentions using SERPAPI (more reliable)"""
+        """Check breach mentions using SERPAPI (more reliable) - FILTERED TO LAST 1-2 YEARS"""
         signals = []
         
         try:
@@ -275,12 +322,15 @@ class CompanyAnalyzer:
             domain = company.get('domain', '')
             company_name = company.get('company_name', '')
             
-            # Search for breach mentions using SERPAPI
+            # Search for breach mentions using SERPAPI - Updated queries for recent years
             search_queries = [
                 f'"{company_name}" data breach 2024',
+                f'"{company_name}" data breach 2025',
+                f'"{company_name}" data breach "2023"',
                 f'"{company_name}" security incident 2024',
                 f'"{company_name}" cyber attack 2024',
-                f'"{domain}" breach 2024'
+                f'"{domain}" breach 2024',
+                f'"{domain}" breach "2023"'
             ]
             
             for query in search_queries:
@@ -312,7 +362,11 @@ class CompanyAnalyzer:
                                 'leaked', 'stolen', 'unauthorized access'
                             ]
                             
-                            if any(keyword in title or keyword in snippet for keyword in breach_keywords):
+                            # Add DATE FILTERING - Only include recent breaches (1-2 years)
+                            news_date = result.get('date', '')
+                            is_recent = self.is_recent_date(news_date)
+                            
+                            if any(keyword in title or keyword in snippet for keyword in breach_keywords) and is_recent:
                                 signal = {
                                     'company_name': company_name,
                                     'domain': domain,
@@ -326,13 +380,17 @@ class CompanyAnalyzer:
                                         'news_title': result.get('title', ''),
                                         'news_snippet': result.get('snippet', ''),
                                         'news_url': result.get('link', ''),
-                                        'news_date': result.get('date', '')
+                                        'news_date': news_date,
+                                        'date_filtered': True,
+                                        'filter_years': '2023-2025'
                                     },
                                     'source': 'company_analysis_serpapi'
                                 }
                                 signals.append(signal)
-                                print(f"Found breach mention via SERPAPI for: {company_name}")
+                                print(f"Found RECENT breach mention via SERPAPI for: {company_name} (Date: {news_date})")
                                 break  # Found one, no need to search more
+                            elif any(keyword in title or keyword in snippet for keyword in breach_keywords) and not is_recent:
+                                print(f"Found OLD breach mention for: {company_name} (Date: {news_date}) - FILTERED OUT")
                     
                     time.sleep(1)  # Rate limiting
                     
